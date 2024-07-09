@@ -13,7 +13,7 @@ public class CollectibleCodeSnippet : MonoBehaviour
     {
         this.manager = manager;
         this.spawnPoint = spawnPoint;
-        int randomNumber = Random.Range(1, 2);
+        int randomNumber = Random.Range(1, 3);
         if (randomNumber == 1)
         {
             isBugBomb = false;
@@ -32,7 +32,6 @@ public class CollectibleCodeSnippet : MonoBehaviour
             if (isBugBomb)
             {
                 PlayerController.Instance.ApplyNegativeEffect(snippet);
-
             }
             else
             {

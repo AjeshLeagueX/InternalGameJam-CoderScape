@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class EnemyDroneAI : MonoBehaviour
 {
-    public Transform player;
     public Transform bombSpawnT;
     private BugBomb bugBomb;
 
@@ -24,15 +23,17 @@ public class EnemyDroneAI : MonoBehaviour
     // Detection
     public float detectionRange = 20f, attackRange = 15f;
     private bool playerInSightRange, playerInAttackRange;
+    Transform player => PlayerController.Instance.transform;
 
     private void Start()
     {
-        player = PlayerController.Instance.gameObject.transform;
         ReloadBomb();
     }
 
     private void Update()
     {
+        if (player == null || EntitiesManager.Instance.IsEnemyFreeze)
+            return;
         // Check for sight and attack range
         playerInSightRange = Physics.CheckSphere(transform.position, detectionRange, whatIsPlayer);
         playerInAttackRange = Physics.CheckSphere(transform.position, attackRange, whatIsPlayer);
@@ -82,17 +83,39 @@ public class EnemyDroneAI : MonoBehaviour
 
     private void ShootBomb()
     {
+        if (bugBomb == null)
+        {
+            ReloadBomb();
+            Debug.LogWarning("BugBomb is null. Cannot shoot.");
+            return;
+        }
+
         Rigidbody rb = bugBomb.body;
+        if (rb == null)
+        {
+            Debug.LogError("Rigidbody is null. Cannot shoot.");
+            return;
+        }
+
         rb.transform.parent = null;
         rb.isKinematic = false;
         rb.useGravity = true;
 
         Vector3 shootDirection = (player.position - bombSpawnT.position).normalized;
-        rb.AddForce(shootDirection * 20f, ForceMode.Impulse); // Adjust the force as needed
+        rb.AddForce(shootDirection * 5f, ForceMode.Impulse); // Adjust the force as needed
 
-        bugBomb.AutoDestroy();
+        StartCoroutine(AutoDestroyBomb(bugBomb)); // Schedule the bomb for destruction after some time
         bugBomb = null;
         ReloadBomb();
+    }
+
+    private IEnumerator AutoDestroyBomb(BugBomb bomb)
+    {
+        yield return new WaitForSeconds(5f); // Adjust the duration as needed
+        if (bomb != null)
+        {
+            Destroy(bomb.gameObject);
+        }
     }
 
     private IEnumerator ResetAttack()

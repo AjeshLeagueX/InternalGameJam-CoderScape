@@ -8,7 +8,7 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour
 {
     public static PlayerController Instance;
-    private void Awake()
+    private void Start()
     {
         Instance = this;
         Initialize();
@@ -25,6 +25,24 @@ public class PlayerController : MonoBehaviour
             if (item.input == "Jump")
                 JumpInput = item;
         }
+        FetchSavedSnippets();
+    }
+    private void Update()
+    {
+        if (Input.GetKeyUp(KeyCode.Alpha1) && enemiesSleepSnippets > 1)
+        {
+            EnemiesSleep();
+            enemiesSleepSnippets--;
+            SaveSnippets();
+        }
+        else if (Input.GetKeyUp(KeyCode.Alpha2) && SlowDownSnippetCount > 1)
+        {
+            if (EntitiesSlowDown())
+            {
+                SlowDownSnippetCount--;
+                SaveSnippets();
+            }
+        }
     }
 
     private int enemiesSleepSnippets = 0;
@@ -34,22 +52,30 @@ public class PlayerController : MonoBehaviour
         PlayerPrefs.SetInt("sleepSnippets", enemiesSleepSnippets);
         PlayerPrefs.SetInt("slowDownSnippets", SlowDownSnippetCount);
         PlayerPrefs.Save();
+        UI_Manager.Instance.UpdateSnippetUI(enemiesSleepSnippets, SlowDownSnippetCount);
     }
     void FetchSavedSnippets()
     {
         enemiesSleepSnippets = PlayerPrefs.GetInt("sleepSnippets");
         SlowDownSnippetCount = PlayerPrefs.GetInt("slowDownSnippets");
+        UI_Manager.Instance.UpdateSnippetUI(enemiesSleepSnippets, SlowDownSnippetCount);
     }
 
     public void CollectCodeSnippet(string snippetCode)
     {
         switch (snippetCode)
         {
-            case "Enemies.Sleep()":
-                enemiesSleepSnippets++;
+            case "Entities.Sleep()":
+                {
+                    UI_Manager.Instance.ShowStatChange("Collected Enemies.Sleep()", true);
+                    enemiesSleepSnippets++;
+                }
                 break;
             case "Entities.Speed/2":
-                SlowDownSnippetCount++;
+                {
+                    UI_Manager.Instance.ShowStatChange("Collected Entities.Speed/2", true);
+                    SlowDownSnippetCount++;
+                }
                 break;
         }
         SaveSnippets();
@@ -68,6 +94,8 @@ public class PlayerController : MonoBehaviour
             case "Player.CanJump = false":
                 StopJump();
                 break;
+            default:
+                throw new NotImplementedException($"Not Implemented for effect {effect}");
         }
     }
 
@@ -76,6 +104,7 @@ public class PlayerController : MonoBehaviour
     [ContextMenu("Invert Control")]
     private void InvertControl()
     {
+        UI_Manager.Instance.ShowStatChange("Attacked by Player.InvertControls()", false);
         animalInput.Horizontal.IsInverted = true;
         animalInput.Vertical.IsInverted = true;
         if (currentInvertCor != null)
@@ -108,7 +137,9 @@ public class PlayerController : MonoBehaviour
     Coroutine currentSlowDownStopCor = null;
     public void SlowDown()
     {
-        animalController.TimeMultiplier = animalController.TimeMultiplier / 2;
+        UI_Manager.Instance.ShowStatChange("Attacked by Player.TimeMultiplier = 0.5f", false);
+
+        animalController.TimeMultiplier = 0.5f;
         if (currentSlowDownStopCor != null)
             StopCoroutine(currentSlowDownStopCor);
         currentSlowDownStopCor = StartCoroutine(WaitAndExecuteAction(UndoSlowDown));
@@ -116,7 +147,7 @@ public class PlayerController : MonoBehaviour
     private void UndoSlowDown()
     {
         if (Time.timeScale == 1)
-            animalController.TimeMultiplier = Time.timeScale * 2;
+            animalController.TimeMultiplier = 1f;
     }
 
     private IEnumerator WaitAndExecuteAction(Action action, float waitTime = 5f)
@@ -134,33 +165,40 @@ public class PlayerController : MonoBehaviour
             ApplyNegativeEffect(_enemySnippet.snippet);
             Destroy(_enemySnippet.gameObject);
         }
+        else if(other.tag == "EndGame")
+        {
+            UI_Manager.Instance.FinishGameUI();
+        }
     }
 
     Coroutine currentEntitiesSlowDownCor = null;
-    private void EntitiesSlowDown()
+    private bool EntitiesSlowDown()
     {
-        Time.timeScale = 0.5f;
-        animalController.TimeMultiplier = animalController.TimeMultiplier * 2;
         if (currentEntitiesSlowDownCor != null)
-            StopCoroutine(currentEntitiesSlowDownCor);
+            return false;
+        EntitiesManager.Instance.SlowDownAllTransformers(2f);
         currentEntitiesSlowDownCor = StartCoroutine(WaitAndExecuteAction(UndoEntiesSlowDown, 10f));
+        return true;
     }
 
     private void UndoEntiesSlowDown()
     {
-        Time.timeScale = 1f;
-        animalController.TimeMultiplier = animalController.TimeMultiplier / 2;
+        EntitiesManager.Instance.UndoSlowDown();
+        currentEntitiesSlowDownCor = null;
     }
     Coroutine currentEnemySleepCor = null;
-    private void EnemiesSleep()
+    private bool EnemiesSleep()
     {
-        throw new NotImplementedException();
         if (currentEnemySleepCor != null)
-            StopCoroutine(currentEnemySleepCor);
+            return false;
+        EntitiesManager.Instance.FreezeEnemyFuntions();
         currentEnemySleepCor = StartCoroutine(WaitAndExecuteAction(UndoEnemiesSleep, 10f));
+        return true;
     }
 
     private void UndoEnemiesSleep()
     {
+        EntitiesManager.Instance.UnFreezeEnemyFunctions();
+        currentEnemySleepCor = null;
     }
 }
