@@ -1,0 +1,4 @@
+﻿2.3.6
+Changelog:
+-Fixed FBX embedded textures regression issue.
+-Fixed embedded textures not loading when using native Unity texture loader.
