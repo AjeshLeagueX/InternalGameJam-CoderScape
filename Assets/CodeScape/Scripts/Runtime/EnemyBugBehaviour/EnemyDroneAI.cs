@@ -1,3 +1,4 @@
+using MalbersAnimations.Utilities;
 using System.Collections;
 using UnityEngine;
 
@@ -25,6 +26,9 @@ public class EnemyDroneAI : MonoBehaviour
     private bool playerInSightRange, playerInAttackRange;
     Transform player => PlayerController.Instance.transform;
 
+    // Separation
+    public float separationDistance = 2f; // Minimum distance between enemies
+
     private void Start()
     {
         ReloadBomb();
@@ -34,6 +38,7 @@ public class EnemyDroneAI : MonoBehaviour
     {
         if (player == null || EntitiesManager.Instance.IsEnemyFreeze)
             return;
+
         // Check for sight and attack range
         playerInSightRange = Physics.CheckSphere(transform.position, detectionRange, whatIsPlayer);
         playerInAttackRange = Physics.CheckSphere(transform.position, attackRange, whatIsPlayer);
@@ -46,27 +51,39 @@ public class EnemyDroneAI : MonoBehaviour
                 AttackPlayer();
             }
         }
+
+        AvoidCollisionWithOtherEnemies();
     }
 
     private void RepositionDrone()
     {
         Vector3 targetPosition = player.position + player.forward * hoverDistance + Vector3.up * hoverHeight;
         transform.position = Vector3.MoveTowards(transform.position, targetPosition, repositionSpeed * Time.deltaTime);
-        transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
+
+        // Smoothly rotate to look at the player
+        Vector3 direction = (player.position - transform.position).normalized;
+        Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * repositionSpeed);
+    }
+
+    private void AvoidCollisionWithOtherEnemies()
+    {
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, separationDistance);
+        foreach (var hitCollider in hitColliders)
+        {
+            if (hitCollider.gameObject != gameObject && hitCollider.CompareTag("Enemy"))
+            {
+                Vector3 directionAway = transform.position - hitCollider.transform.position;
+                transform.position += directionAway.normalized * (separationDistance - directionAway.magnitude) * Time.deltaTime;
+            }
+        }
     }
 
     private void AttackPlayer()
     {
-        // Ensure drone doesn't reposition while attacking
         if (!alreadyAttacked)
         {
-            // Attack code here
             ShootBomb();
-            alreadyAttacked = true;
-
-            if (attackWaitCoroutine != null)
-                StopCoroutine(attackWaitCoroutine);
-            attackWaitCoroutine = StartCoroutine(ResetAttack());
         }
     }
 
@@ -83,12 +100,14 @@ public class EnemyDroneAI : MonoBehaviour
 
     private void ShootBomb()
     {
+        Debug.Log("Shoot Bomb");
         if (bugBomb == null)
         {
             ReloadBomb();
             Debug.LogWarning("BugBomb is null. Cannot shoot.");
             return;
         }
+        Debug.Log("Shoot Bomb 1");
 
         Rigidbody rb = bugBomb.body;
         if (rb == null)
@@ -96,26 +115,31 @@ public class EnemyDroneAI : MonoBehaviour
             Debug.LogError("Rigidbody is null. Cannot shoot.");
             return;
         }
+        Debug.Log("Shoot Bomb 2");
 
         rb.transform.parent = null;
         rb.isKinematic = false;
         rb.useGravity = true;
 
+        // Reset forces and clear all velocities to ensure it starts clean
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        // Apply force to shoot the bomb
         Vector3 shootDirection = (player.position - bombSpawnT.position).normalized;
-        rb.AddForce(shootDirection * 5f, ForceMode.Impulse); // Adjust the force as needed
+        float force = 2f; // Adjust force as needed
+        rb.AddForce(shootDirection * force, ForceMode.VelocityChange);
 
-        StartCoroutine(AutoDestroyBomb(bugBomb)); // Schedule the bomb for destruction after some time
+        Debug.Log("Bomb velocity: " + rb.velocity); // Log the velocity for debugging
+        bugBomb.AutoDestroy();
         bugBomb = null;
+        Debug.Log("Shoot Bomb 3");
+        alreadyAttacked = true;
         ReloadBomb();
-    }
 
-    private IEnumerator AutoDestroyBomb(BugBomb bomb)
-    {
-        yield return new WaitForSeconds(5f); // Adjust the duration as needed
-        if (bomb != null)
-        {
-            Destroy(bomb.gameObject);
-        }
+        if (attackWaitCoroutine != null)
+            StopCoroutine(attackWaitCoroutine);
+        attackWaitCoroutine = StartCoroutine(ResetAttack());
     }
 
     private IEnumerator ResetAttack()
@@ -124,23 +148,13 @@ public class EnemyDroneAI : MonoBehaviour
         alreadyAttacked = false;
     }
 
-    public void TakeDamage(int damage)
-    {
-        health -= damage;
-
-        if (health <= 0) Invoke(nameof(DestroyDrone), 0.5f);
-    }
-
-    private void DestroyDrone()
-    {
-        Destroy(gameObject);
-    }
-
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, detectionRange);
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(transform.position, separationDistance);
     }
 }

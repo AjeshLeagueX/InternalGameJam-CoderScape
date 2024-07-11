@@ -19,16 +19,10 @@ public class BugBomb : MonoBehaviour
         snippet = GetRandomBugBombSnippet();
         body.useGravity = false;
         body.isKinematic = true;
+        body.velocity = Vector3.zero;
+        body.angularVelocity = Vector3.zero;
     }
-    //private void OnTriggerEnter(Collider other)
-    //{
-    //    if (other.tag == "Animal" && other.GetComponent<PlayerController>() != null)
-    //    {
-    //        PlayerController.Instance.ApplyNegativeEffect(type);
-    //        StopCoroutine(AutoDestroy());
-    //        Destroy(gameObject);
-    //    }
-    //}
+
     public void AutoDestroy()
     {
         StartCoroutine(AutoDestroyCoroutine());
@@ -38,10 +32,13 @@ public class BugBomb : MonoBehaviour
         yield return new WaitForSeconds(10f);//Destroy after 10 secs
         Destroy(this.gameObject);
     }
-    //public void Destroy()
-    //{
-    //    body.useGravity = false;
-    //    body.isKinematic = true;
-    //    ObjectPool.Instance.ReleaseBugBomb(this);
-    //}
+    public void Destroy()
+    {
+        // Reset forces and clear all velocities to ensure it starts clean
+        body.velocity = Vector3.zero;
+        body.angularVelocity = Vector3.zero;
+        body.useGravity = false;
+        body.isKinematic = true;
+        ObjectSpawner.Instance.ReleaseBugBomb(this);
+    }
 }

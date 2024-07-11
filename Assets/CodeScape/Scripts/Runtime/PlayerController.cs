@@ -31,9 +31,11 @@ public class PlayerController : MonoBehaviour
     {
         if (Input.GetKeyUp(KeyCode.Alpha1) && enemiesSleepSnippets > 1)
         {
-            EnemiesSleep();
-            enemiesSleepSnippets--;
-            SaveSnippets();
+            if (EnemiesSleep())
+            {
+                enemiesSleepSnippets--;
+                SaveSnippets();
+            }
         }
         else if (Input.GetKeyUp(KeyCode.Alpha2) && SlowDownSnippetCount > 1)
         {
@@ -165,7 +167,7 @@ public class PlayerController : MonoBehaviour
             ApplyNegativeEffect(_enemySnippet.snippet);
             Destroy(_enemySnippet.gameObject);
         }
-        else if(other.tag == "EndGame")
+        else if (other.tag == "EndGame")
         {
             UI_Manager.Instance.FinishGameUI();
         }
@@ -201,4 +203,13 @@ public class PlayerController : MonoBehaviour
         EntitiesManager.Instance.UnFreezeEnemyFunctions();
         currentEnemySleepCor = null;
     }
+
+    //[ContextMenu("Test")]
+    //private void Check()
+    //{
+    //    var gos = GameObject.FindGameObjectsWithTag("EnemySnippet");
+
+    //    foreach (var item in gos)
+    //        Debug.Log(item.name);
+    //}
 }
