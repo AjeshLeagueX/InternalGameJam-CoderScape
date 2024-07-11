@@ -25610,7 +25610,7 @@ MonoBehaviour:
     Variable: {fileID: 0}
   Smoothness:
     UseConstant: 1
-    ConstantValue: 8
+    ConstantValue: 4
     Variable: {fileID: 0}
   onlyTargets:
     UseConstant: 1
@@ -27222,8 +27222,8 @@ MonoBehaviour:
   SelectedState: 12
   SelectedStance: 7
   ShowStateInInspector: 0
-  Editor_Tabs1: 0
-  Editor_Tabs2: 4
+  Editor_Tabs1: 4
+  Editor_Tabs2: 1
   SelectedMode: 9
   Mode_Tabs1: 1
   Ability_Tabs: 2

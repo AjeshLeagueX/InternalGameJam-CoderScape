@@ -15,6 +15,9 @@ public class UI_Manager : MonoBehaviour
 
     private void Start()
     {
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
         finishGameUI.SetActive(false);
         StartCoroutine(CloseGameStartUI());
     }
